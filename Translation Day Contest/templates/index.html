@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Translation Evaluation</title>
+    <!-- Google Fonts: Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <style>
+        body {
+          font-family: "Poppins", sans-serif;
+          margin: 0;
+          padding: 0;
+          background-color: #000000d3;
+        }
+        /* Navbar styling */
+        .navbar {
+          background-color: #000;
+          color: white;
+          padding: 15px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .navbar h1 {
+          margin: 0;
+          font-size: 20px;
+          font-weight: 600;
+        }
+        .navbar .nav-right {
+          display: flex;
+          gap: 15px;
+        }
+        .nav-link {
+          color: #ffffffb3;
+          text-decoration: none;
+          font-size: 14px;
+          font-weight: 500;
+          transition: color 0.3s, background-color 0.3s;
+          padding: 5px 10px;
+          border-radius: 5px;
+        }
+        .nav-link:hover {
+          background-color: #333;
+          color: #ffffff;
+        }
+
+        /* Main container styling */
+        .container {
+          max-width: 600px;
+          margin: 20px auto;
+          padding: 20px;
+          border: 1px solid #000000;
+          border-radius: 10px;
+          box-shadow: 0px 4px 8px rgba(114, 113, 113, 0.597);
+          background-color: #00000089;
+          transition: transform 0.3s ease;
+        }
+        .container:hover {
+          transform: translateY(-5px);
+          box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        h1 {
+          text-align: center;
+          color: #ffffff;
+          font-size: 24px;
+          margin-bottom: 20px;
+        }
+        label {
+          font-weight: 500;
+          color: #f7e9e9;
+        }
+        input[type="text"] {
+          width: 100%;
+          padding: 10px;
+          margin: 10px 0;
+          border-radius: 5px;
+          border: 1px solid #000000a7;
+          box-sizing: border-box;
+          transition: border-color 0.3s;
+          font-family: "Poppins", sans-serif;
+        }
+        input[type="text"]:focus {
+          border-color: #007bff;
+          outline: none;
+        }
+        input[type="submit"] {
+          width: 100%;
+          padding: 10px;
+          margin-top: 15px;
+          border-radius: 5px;
+          border: none;
+          background-color: #007bff;
+          color: white;
+          font-size: 16px;
+          cursor: pointer;
+          transition: background-color 0.3s;
+          font-family: "Poppins", sans-serif;
+          margin-bottom: 20px;
+        }
+        input[type="submit"]:hover {
+          background-color: #0056b3;
+        }
+        .results {
+          margin-top: 20px;
+          padding: 15px;
+          border: 1px solid #ddd;
+          border-radius: 5px;
+          background-color: #f0f4f855;
+        }
+        .similarity-scores p {
+          font-size: 14px;
+          margin: 5px 0;
+        }
+        .error {
+          color: red;
+          text-align: center;
+        }
+        .loading {
+            color: #007bff;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1><b>Translation Evaluation</b></h1>
+
+    <!-- Form for entering source text and human translation -->
+    <form id="evalForm">
+        <label for="source_text">Source Text (A):</label>
+        <input type="text" id="source_text" name="source_text" placeholder="Enter source text" required />
+
+        <label for="human_translation">Human Translation (B):</label>
+        <input type="text" id="human_translation" name="human_translation" placeholder="Enter human translation" required />
+
+        <input type="submit" value="Evaluate" />
+    </form>
+
+    <!-- Display error message if any -->
+    <div id="error" class="error" style="color: red;"></div>
+    <div id="loading" class="loading" style="display: none;">Processing...</div>
+
+    <!-- Placeholder for displaying evaluation results -->
+    <div id="results" class="results" style="display: none;">
+        <h3>Evaluation Results:</h3>
+        <p><strong>Generated Source Text:</strong> <span id="generated_source_text"></span></p>
+        <p><strong>Generated Translation:</strong> <span id="generated_translation"></span></p>
+
+        <div class="similarity-scores">
+            <p><strong>Cosine Similarity (A vs B & B vs A):</strong> <span id="cosine_similarity"></span></p>
+            <p><strong>BLEU Score (A vs B & B vs A):</strong> <span id="bleu_score"></span></p>
+            <p><strong>ROUGE Scores:</strong></p>
+            <ul>
+                <li>ROUGE-1 (A vs B & B vs A): <span id="rouge_1"></span></li>
+                <li>ROUGE-2 (A vs B & B vs A): <span id="rouge_2"></span></li>
+                <li>ROUGE-L (A vs B & B vs A): <span id="rouge_L"></span></li>
+            </ul>
+            <p><strong>Meteor Score (A vs B & B vs A):</strong> <span id="meteor_score"></span></p>
+            <p><strong>Levenshtein Distance (A vs B & B vs A):</strong> <span id="levenshtein_distance"></span></p>
+            <p><strong>BERT Cosine Similarity (A vs B & B vs A):</strong> <span id="bert_cosine_similarity"></span></p>
+        </div>
+
+        <h4>Aggregate Score: <span id="aggregate_score"></span></h4>
+        <h4>Translation Quality: <span id="translation_quality"></span></h4>
+    </div>
+</div>
+
+<script>
+    // Event listener for form submission
+    document.getElementById("evalForm").addEventListener("submit", function (event) {
+      event.preventDefault();  // Prevent default form submission behavior
+
+      const sourceText = document.getElementById("source_text").value.trim();
+      const humanTranslation = document.getElementById("human_translation").value.trim();
+
+      // Check if both fields are filled out
+      if (!sourceText || !humanTranslation) {
+          document.getElementById("error").innerText = "Both fields are required!";
+          return;
+      }
+
+      // Prepare data to send to the server
+      const data = {
+          source_text: sourceText,
+          human_translation: humanTranslation,
+      };
+
+      // Reset error and results sections
+      document.getElementById("error").innerText = "";
+      document.getElementById("results").style.display = "none";
+      document.getElementById("loading").style.display = "block";  // Show loading indicator
+
+      // Fetch request to the Flask server
+      fetch("http://127.0.0.1:5000/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+      })
+      .then((response) => response.json())  // Parse the JSON response
+      .then((data) => {
+          document.getElementById("loading").style.display = "none";  // Hide loading indicator
+
+          // Check for error in response
+          if (data.error) {
+              document.getElementById("error").innerText = data.error;
+              document.getElementById("results").style.display = "none";
+          } else {
+              // Display the results
+              document.getElementById("results").style.display = "block";
+              document.getElementById("generated_source_text").innerText = data.generated_source_text;
+              document.getElementById("generated_translation").innerText = data.generated_translation;
+
+              // Display similarity scores
+              document.getElementById("cosine_similarity").innerText =
+                  `${data.cosine_similarity_ab?.toFixed(3)} / ${data.cosine_similarity_ba?.toFixed(3)}`;
+              document.getElementById("bleu_score").innerText =
+                  `${data.bleu_score_ab?.toFixed(3)} / ${data.bleu_score_ba?.toFixed(3)}`;
+              document.getElementById("rouge_1").innerText =
+                  `${data.rouge_1_f1_ab?.toFixed(3)} / ${data.rouge_1_f1_ba?.toFixed(3)}`;
+              document.getElementById("rouge_2").innerText =
+                  `${data.rouge_2_f1_ab?.toFixed(3)} / ${data.rouge_2_f1_ba?.toFixed(3)}`;
+              document.getElementById("rouge_L").innerText =
+                  `${data.rouge_l_f1_ab?.toFixed(3)} / ${data.rouge_l_f1_ba?.toFixed(3)}`;
+              document.getElementById("meteor_score").innerText =
+                  `${data.meteor_score_ab?.toFixed(3)} / ${data.meteor_score_ba?.toFixed(3)}`;
+              document.getElementById("levenshtein_distance").innerText =
+                  `${data.levenshtein_similarity_ab?.toFixed(3)} / ${data.levenshtein_similarity_ba?.toFixed(3)}`;
+              document.getElementById("bert_cosine_similarity").innerText =
+                  `${data.bert_cosine_similarity_ab?.toFixed(3)} / ${data.bert_cosine_similarity_ba?.toFixed(3)}`;
+
+              // Display aggregate score and quality rating
+              document.getElementById("aggregate_score").innerText =
+                `${data.aggregate_score_ab?.toFixed(3)} / ${data.aggregate_score_apb?.toFixed(3)}`;
+              const averageQuality = (data.translation_quality_ab + data.translation_quality_apb) / 2;
+
+                let qualityText;
+                if (averageQuality >= 4) {
+                    qualityText = "Very Good";
+                } else if (averageQuality >= 3) {
+                    qualityText = "Good";
+                } else if (averageQuality >= 2) {
+                    qualityText = "Average";
+                } else if (averageQuality >= 1) {
+                    qualityText = "Bad";
+                } else {
+                    qualityText = "Very Bad";
+                }
+
+                document.getElementById("translation_quality").innerText = qualityText;
+          }
+      })
+      .catch((error) => {
+          document.getElementById("loading").style.display = "none";
+          document.getElementById("error").innerText = "An error occurred: " + error.message;
+      });
+    });
+</script>
+</body>
+</html>
