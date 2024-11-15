@@ -15,12 +15,10 @@ Clone from a Git Repository (if applicable):
   git clone <repository-link>
   
   cd <repository-folder>
-  
-              or
               
 Download as ZIP:
 
-If the code is shared as a ZIP file, download and extract it to your desired directory.
+Download the code as a ZIP file and extract it to your desired directory.
 
 **Step 3: Set Up a Virtual Environment**
 
